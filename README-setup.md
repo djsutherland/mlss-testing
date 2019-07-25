@@ -50,7 +50,7 @@ conda activate mlss-testing
 
 git clone https://github.com/dougalsutherland/mlss-testing
 cd mlss-testing
-python check_imports_and_download.py
+python check_imports.py
 jupyter notebook
 ```
 

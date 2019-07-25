@@ -2,6 +2,7 @@
 Some probably over-engineered infrastructure for lazily computing kernel
 matrices, allowing for various sums / means / etc used by MMD-related estimators.
 """
+from copy import copy
 from functools import wraps
 
 import numpy as np
@@ -48,41 +49,94 @@ class LazyKernel(torch.nn.Module):
 
     def __init__(self, X, *rest):
         super().__init__()
-        self._parts = X, *rest = as_tensors(X, *rest)
-        for p in self._parts:
-            if p is not None:
-                assert len(p.shape) >= 2
-                assert p.shape[1:] == X.shape[1:]
-
         self._cache = {}
         if not hasattr(self, "const_diagonal"):
             self.const_diagonal = False
 
+        # want to use pytorch buffer for parts
+        # but can't assign a list to those, so munge some names
+        X, *rest = as_tensors(X, *rest)
+        if len(X.shape) < 2:
+            raise ValueError(
+                "LazyKernel expects inputs to be at least 2d. "
+                "If your data is 1d, make it [n, 1] with X[:, np.newaxis]."
+            )
+
+        self.register_buffer("_part_0", X)
+        self.n_parts = 1
+        for p in rest:
+            self.append_part(p)
+
     @property
     def X(self):
-        return self._parts[0]
+        return self._part_0
+
+    def _part(self, i):
+        return self._buffers[f"_part_{i}"]
+
+    def part(self, i):
+        p = self._part(i)
+        return self.X if p is None else p
 
     @property
     def ns(self):
-        return [self.X.shape[0] if p is None else p.shape[0] for p in self._parts]
-
-    @property
-    def n_parts(self):
-        return len(self._parts)
+        return [self.part(i).shape[0] for i in range(self.n_parts)]
 
     @property
     def parts(self):
-        return [self.X if p is None else p for p in self._parts]
+        return [self.part(i) for i in range(self.n_parts)]
 
     def __repr__(self):
         return f"<{type(self).__name__}({', '.join(str(n) for n in self.ns)})>"
 
+    def _compute(self, A, B):
+        """
+        Compute the kernel matrix between A and B.
+
+        Might get called with A = X, B = X, or A = X, B = Y, etc.
+
+        Should return a tensor of shape [A.shape[0], B.shape[0]].
+
+        This default, slow, version calls self._compute_one(a, b) in a loop.
+        If you override this, you don't need to implement _compute_one at all.
+
+        If you implement _precompute, this gets added to the signature here:
+            self._compute(A, *self._precompute(A), B, *self._precompute(B)).
+        The default _precompute returns an empty tuple, so it's _compute(A, B),
+        but if you make a _precompute that returns [A_squared, A_cubed] then it's
+            self._compute(A, A_squared, A_cubed, B, B_squared, B_cubed).
+        """
+        return torch.stack(
+            [
+                torch.stack([torch.as_tensor(self._compute_one(a, b)) for b in B])
+                for a in A
+            ]
+        )
+
+    def _compute_one(self, a, b):
+        raise NotImplementedError(
+            f"{type(self).__name__}: need to implement _compute or _compute_one"
+        )
+
     def _precompute(self, A):
+        """
+        Compute something extra for each part A.
+
+        Can be used to share computation between kernel(X, X) and kernel(X, Y).
+
+        We end up calling basically (but with caching)
+            self._compute(A, *self._precompute(A), B, *self._precompute(B))
+        This default _precompute returns an empty tuple, so it's
+            self._compute(A, B)
+        But if you return [A_squared], it'd be
+            self._compute(A, A_squared, B, B_squared)
+        and so on.
+        """
         return ()
 
     @_cache
     def _precompute_i(self, i):
-        p = self._parts[i]
+        p = self._part(i)
         if p is None:
             return self._precompute_i(0)
         return self._precompute(p)
@@ -94,11 +148,11 @@ class LazyKernel(torch.nn.Module):
         except ValueError:
             raise KeyError("You should index kernels with pairs")
 
-        A = self._parts[i]
+        A = self._part(i)
         if A is None:
             return self[0, j]
 
-        B = self._parts[j]
+        B = self._part(j)
         if B is None:
             return self[i, 0]
 
@@ -111,12 +165,10 @@ class LazyKernel(torch.nn.Module):
 
     @_cache
     def matrix(self, i, j):
-        A = self._parts[i]
-        if A is None:
+        if self._part(i) is None:
             return self.matrix(0, j)
 
-        B = self._parts[j]
-        if B is None:
+        if self._part(j) is None:
             return self.matrix(i, 0)
 
         k = self[i, j]
@@ -134,18 +186,19 @@ class LazyKernel(torch.nn.Module):
     @_cache
     def joint_m(self, *inds):
         if not inds:
-            return self.joint(*range(self.n_parts))
+            return self.joint_m(*range(self.n_parts))
         return as_matrix(
             self.joint(*inds), const_diagonal=self.const_diagonal, symmetric=True
         )
 
     def __getattr__(self, name):
         # self.X, self.Y, self.Z
-        if len(name) == 1:
-            i = _name_map.get(name, np.inf)
+        if name in _name_map:
+            i = _name_map[name]
             if i < self.n_parts:
-                return self.parts[i]
-            raise AttributeError()
+                return self.part(i)
+            else:
+                raise AttributeError(f"have {self.n_parts} parts, asked for {i}")
 
         # self.XX, self.XY, self.YZ, etc; also self.XX_m
         ret_matrix = False
@@ -173,20 +226,44 @@ class LazyKernel(torch.nn.Module):
                 del self._cache[k]
 
     def drop_last_part(self):
-        self._invalidate_cache(self.n_parts - 1)
-        del self._parts[-1]
+        assert self.n_parts >= 2
+        i = self.n_parts - 1
+        self._invalidate_cache(i)
+        del self._buffers[f"_part_{i}"]
+        self.n_parts -= 1
 
     def change_part(self, i, new):
         assert i < self.n_parts
-        assert len(new.shape) == 2
-        assert new.shape[1:] == self.X.shape[1:]
+        if new is not None and new.shape[1:] != self.X.shape[1:]:
+            raise ValueError(f"X has shape {self.X.shape}, new entry has {new.shape}")
         self._invalidate_cache(i)
-        self._parts[i] = new
+        self._buffers[f"_part_{i}"] = new
 
     def append_part(self, new):
-        assert len(new.shape) == 2
-        assert new.shape[1:] == self.X.shape[1:]
-        self._parts.append(new)
+        if new is not None and new.shape[1:] != self.X.shape[1:]:
+            raise ValueError(f"X has shape {self.X.shape}, new entry has {new.shape}")
+        self._buffers[f"_part_{self.n_parts}"] = new
+        self.n_parts += 1
+
+    def __copy__(self):
+        """
+        Doesn't deep-copy the data tensors, but copies dictionaries so that
+        change_part/etc don't affect the original.
+        """
+        cls = self.__class__
+        result = cls.__new__(cls)
+        to_copy = {"_cache", "_buffers", "_parameters", "_modules"}
+        result.__dict__.update(
+            {k: v.copy() if k in to_copy else v for k, v in self.__dict__.items()}
+        )
+        return result
+
+    def _apply(self, fn):  # used in to(), cuda(), etc
+        super()._apply(fn)
+        for key, val in self._cache.items():
+            if val is not None:
+                self._cache[key] = fn(val)
+        return self
 
     def as_tensors(self, *args, **kwargs):
         "Helper that makes everything a tensor with self.X's type."

@@ -1,34 +1,38 @@
-This is the practical component of the [Data Science Summer School](https://www.ds3-datascience-polytechnique.fr) 2019 session on "Learning With Positive Definite Kernels: Theory, Algorithms, and Applications."
-Slides are available [here](https://github.com/dougalsutherland/ds3-kernels/tree/slides).
+This is the practical component of the [Machine Learning Summer School, Moscow 2019](https://mlss2019.skoltech.ru/) session on kernels, focusing on hypothesis testing with kernel statistics.
 
-It was prepared primarily by [Dougal Sutherland](http://www.gatsby.ucl.ac.uk/~dougals/), based on discussions with [Bharath Sriperumbudur](http://personal.psu.edu/bks18/), and partially based on earlier [materials](https://github.com/karlnapf/ds3_kernel_testing) by [Heiko Strathmann](http://herrstrathmann.de/).
+The materials here are primarily by 
+[Dougal Sutherland](http://www.gatsby.ucl.ac.uk/~dougals/)
+with input from [Arthur Gretton](http://www.gatsby.ucl.ac.uk/~gretton/),
+updated slightly from [a previous course](https://github.com/dougalsutherland/ds3-kernels/),
+and based in large part on [earlier materials](https://github.com/karlnapf/ds3_kernel_testing)
+by [Heiko Strathmann](http://herrstrathmann.de/).
 
 We'll cover, in varying levels of detail, the following topics:
 
-- Solving regression problems with kernel ridge regression ([`ridge.ipynb`](ridge.ipynb)):
-  - The "standard" approach.
-  - Computational/statistical tradeoffs using the Nyström and random Fourier kernel approximations.
-  - Learning an appropriate kernel function in a meta-learning setting.
-- Two-sample testing with the kernel Maximum Mean Discrepancy (MMD) ([`testing.ipynb`](testing.ipynb)):
+- Two-sample testing with the kernel Maximum Mean Discrepancy (MMD).
+  - Basic concepts of hypothesis testing, including permutation tests.
+  - Computing kernel values.
   - Estimators for the MMD.
   - Learning an appropriate kernel function.
+- Independence testing with the Hilbert-Schmidt Independence Criterion.
+
 
 ## Dependencies
 
 ### Colab
 
-These notebooks are available on Google Colab: [ridge](https://colab.research.google.com/github/dougalsutherland/ds3-kernels/blob/built/ridge.ipynb) or [testing](https://colab.research.google.com/github/dougalsutherland/ds3-kernels/blob/built/testing.ipynb). You don't have to set anything up yourself and it runs on cloud resources, so this is probably the easiest option. If you want to use the GPU, click Runtime -> Change runtime type -> Hardware accelerator -> GPU.
+This notebook is [available on Google Colab](https://colab.research.google.com/github/dougalsutherland/mlss-testing/blob/built/testing.ipynb). You don't have to set anything up yourself and it runs on cloud resources, so this is probably the easiest option if you trust that your network connection is going to be reasonably reliable. Make a copy to your own Google Drive to save your progress, and to use a GPU, click Runtime -> Change runtime type -> Hardware accelerator -> GPU.
 
 ### Local setup
 
-Run `check_imports_and_download.py` to see if everything you need is installed (and download some more small datasets if necessary). If that works, you're set; otherwise, read on.
+Run `check_imports.py` to see if everything you need is installed and downloaded. If that works, you're set; otherwise, read on.
 
 
 ### Files
 There are a few Python files and some data files in the repository. By far the easiest thing to do is just put them all in the same directory:
 
 ```
-git clone https://github.com/dougalsutherland/ds3-kernels
+git clone https://github.com/dougalsutherland/mlss-testing
 ```
 
 #### Python version
@@ -41,17 +45,11 @@ The main thing we use is PyTorch and Jupyter. If you already have those set up, 
 If you don't already have a setup you're happy with, we recommend the `conda` package manager - start by installing [miniconda](https://docs.conda.io/en/latest/miniconda.html). Then you can create an environment with everything you need as:
 
 ```bash
-conda create --name ds3-kernels \
-  --override-channels -c pytorch -c defaults --strict-channel-priority \
-  python=3 notebook ipywidgets \
-  numpy scipy scikit-learn \
-  pytorch=1.1 torchvision \
-  matplotlib seaborn tqdm
+conda create --name mlss-testing --override-channels -c pytorch -c defaults --strict-channel-priority python=3 notebook ipywidgets numpy scipy scikit-learn pytorch=1.1 torchvision matplotlib seaborn tqdm
+conda activate mlss-testing
 
-conda activate ds3-kernels
-
-git clone https://github.com/dougalsutherland/ds3-kernels
-cd ds3-kernels
+git clone https://github.com/dougalsutherland/mlss-testing
+cd mlss-testing
 python check_imports_and_download.py
 jupyter notebook
 ```
@@ -66,3 +64,5 @@ jupyter notebook
 We're going to use PyTorch in this tutorial, even though we're not doing a ton of "deep learning." (The CPU version will be fine, though a GPU might let you get slightly better performance in some of the "advanced" sections.)
 
 If you haven't used PyTorch before, don't worry! The API is unfortunately a little different from NumPy (and TensorFlow), but it's pretty easy to get used to; you can refer to [a cheat sheet vs NumPy](https://github.com/wkentaro/pytorch-for-numpy-users/blob/master/README.md) as well as the docs: [tensor methods](https://pytorch.org/docs/stable/tensors.html) and [the `torch` namespace](https://pytorch.org/docs/stable/torch.html#torch.eq). Feel free to ask if you have trouble figuring something out.
+
+You can convert a `torch.Tensor` to a `numpy.ndarray` with [`t.numpy()`](https://pytorch.org/docs/stable/tensors.html#torch.Tensor.numpy), and vice versa with [`torch.as_tensor()`](https://pytorch.org/docs/stable/torch.html#torch.as_tensor). (These share data when possible.) Doing this breaks PyTorch's ability to track gradients through these objects, but it's okay for things we won't need to take derivatives of. If you have a one-element tensor, you can get a regular Python number out of it with [`t.item()`](https://pytorch.org/docs/stable/tensors.html#torch.Tensor.item).

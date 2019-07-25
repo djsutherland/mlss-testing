@@ -34,20 +34,15 @@ index.remove(".drop-nb-output")
 index.remove(".gitattributes")
 index.remove("Makefile")
 index.remove("README-setup.md")
-index.remove("solutions-src-ridge.ipynb")
 index.remove("solutions-src-testing.ipynb")
 index_add("README.md", repo.create_blob_fromworkdir("README-setup.md"))
 
-for fn in (
-    ["ridge.ipynb", "testing.ipynb", "solutions-testing.ipynb"]
-    + glob("figs/*.png")
-    + glob("data/*.npz")
-):
+for fn in ["testing.ipynb"] + glob("figs/*.png") + glob("data/*.npz"):
     mode = filemode_exe if os.access(fn, os.X_OK) else filemode
     index_add(fn, repo.create_blob_fromworkdir(fn), mode)
 
-# munge solutions-ridge.ipynb to include the readme
-with open("solutions-ridge.ipynb") as f:
+# munge solutions-testing.ipynb to include the readme
+with open("solutions-testing.ipynb") as f:
     nb = json.load(f)
 cell = next(c for c in nb["cells"] if c["cell_type"] == "code")
 assert "display(Markdown(" in cell["source"][-1]
@@ -55,7 +50,7 @@ cell["cell_type"] = "markdown"
 cell["source"] = cell["outputs"][0]["data"]["text/markdown"]
 del cell["outputs"], cell["execution_count"]
 solutions_blob = repo.create_blob(json.dumps(nb, indent=1).encode("utf-8"))
-index_add("solutions-ridge.ipynb", solutions_blob)
+index_add("solutions-testing.ipynb", solutions_blob)
 
 # munge the gitignore
 with open(".gitignore") as f:

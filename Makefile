@@ -1,12 +1,9 @@
 .PHONY: all commit
 
-all: ridge.ipynb testing.ipynb solutions-ridge.ipynb solutions-testing.ipynb
-
-ridge.ipynb: solutions-ridge.ipynb build.py
-	./build.py ridge --include-readme
+all: testing.ipynb solutions-testing.ipynb
 
 testing.ipynb: solutions-testing.ipynb build.py
-	./build.py testing
+	./build.py testing --include-readme
 
 solutions-%.ipynb: solutions-src-%.ipynb
 	@# name python3 is the auto one from currently active conda env...we hope
@@ -14,6 +11,6 @@ solutions-%.ipynb: solutions-src-%.ipynb
 		--ExecutePreprocessor.kernel_name=python3 \
 		--ExecutePreprocessor.timeout=300
 
-commit: ridge.ipynb testing.ipynb solutions-ridge.ipynb solutions-testing.ipynb
+commit: all
 	./commit.py
 

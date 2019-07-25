@@ -2,7 +2,7 @@
 
 all: testing.ipynb solutions-testing.ipynb
 
-testing.ipynb: solutions-testing.ipynb build.py
+testing.ipynb: solutions-testing.ipynb build.py README-setup.md
 	./build.py testing --include-readme
 
 solutions-%.ipynb: solutions-src-%.ipynb

@@ -7,12 +7,12 @@ def mmd2_u_stat_variance(K, inds=(0, 1)):
     """
     i, j = inds
 
-    assert K.ns[i] == K.ns[j]
-    m = K.ns[i]
+    m = K.n(i)
+    assert K.n(j) == m
 
-    XX = K.matrix(*inds)
-    XY = K.matrix(*inds)
-    YY = K.matrix(*inds)
+    XX = K.matrix(i, i)
+    XY = K.matrix(i, j)
+    YY = K.matrix(j, j)
 
     mm = m * m
     mmm = mm * m

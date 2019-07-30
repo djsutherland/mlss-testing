@@ -1,9 +1,9 @@
 This is the practical component of the [Machine Learning Summer School, Moscow 2019](https://mlss2019.skoltech.ru/) session on kernels, focusing on hypothesis testing with kernel statistics.
 
-The materials here are primarily by 
+The materials here are most recently by
 [Dougal Sutherland](http://www.gatsby.ucl.ac.uk/~dougals/)
-with input from [Arthur Gretton](http://www.gatsby.ucl.ac.uk/~gretton/),
-updated slightly from [a previous course](https://github.com/dougalsutherland/ds3-kernels/),
+with consultation from [Arthur Gretton](http://www.gatsby.ucl.ac.uk/~gretton/),
+updated from [a previous course](https://github.com/dougalsutherland/ds3-kernels/),
 and based in large part on [earlier materials](https://github.com/karlnapf/ds3_kernel_testing)
 by [Heiko Strathmann](http://herrstrathmann.de/).
 
@@ -21,14 +21,14 @@ We'll cover, in varying levels of detail, the following topics:
 
 ### Colab
 
-This notebook is [available on Google Colab](https://colab.research.google.com/github/dougalsutherland/mlss-testing/blob/built/testing.ipynb). You don't have to set anything up yourself and it runs on cloud resources, so this is probably the easiest option if you trust that your network connection is going to be reasonably reliable. Make a copy to your own Google Drive to save your progress, and to use a GPU, click Runtime -> Change runtime type -> Hardware accelerator -> GPU.
+This notebook is [available on Google Colab](https://colab.research.google.com/github/dougalsutherland/mlss-testing/blob/built/testing.ipynb). You don't have to set anything up yourself and it runs on cloud resources, so this is probably the easiest option if you trust that your network connection is going to be reasonably reliable. Make a copy to your own Google Drive to save your progress, and to use a GPU, click Runtime -> Change runtime type -> Hardware accelerator -> GPU. Everything you need is already installed on Colab; use a Python 3 notebook.
 
 ### Local setup
 
 Run `check_imports.py` to see if everything you need is installed and downloaded. If that works, you're set; otherwise, read on.
 
 
-### Files
+#### Files
 There are a few Python files and some data files in the repository. By far the easiest thing to do is just put them all in the same directory:
 
 ```
@@ -36,7 +36,7 @@ git clone https://github.com/dougalsutherland/mlss-testing
 ```
 
 #### Python version
-This notebook requires Python 3.6+. Python 3.0 was released in 2008, and it's time to stop living in the past; most importart Python projects [are dropping support for Python 2 this year](https://python3statement.org/). If you've never used Python 3 before, don't worry! It's almost the same; for the purposes of this notebook, you probably only need to know that you should write `print("hi")` since it's a function call now, and you can write `A @ B` instead of `np.dot(A, B)`.
+This notebook requires Python 3.6+. Python 3.0 was released in 2008, and it's time to stop living in the past; most importart Python projects [are dropping support for Python 2 this year](https://python3statement.org/). If you've never used Python 3 before, don't worry! It's almost the same; for the purposes of this notebook, you probably only need to know that you should write `print("hi")` since it's a function call now, and you can write `A @ B` instead of `A.dot(B)`.
 
 #### Python packages
 

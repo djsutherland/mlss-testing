@@ -78,13 +78,24 @@ class LazyKernel(torch.nn.Module):
         p = self._part(i)
         return self.X if p is None else p
 
+    def n(self, i):
+        return self.part(i).shape[0]
+
     @property
     def ns(self):
-        return [self.part(i).shape[0] for i in range(self.n_parts)]
+        return [self.n(i) for i in range(self.n_parts)]
 
     @property
     def parts(self):
         return [self.part(i) for i in range(self.n_parts)]
+
+    @property
+    def dtype(self):
+        return self.X.dtype
+
+    @property
+    def device(self):
+        return self.X.device
 
     def __repr__(self):
         return f"<{type(self).__name__}({', '.join(str(n) for n in self.ns)})>"
